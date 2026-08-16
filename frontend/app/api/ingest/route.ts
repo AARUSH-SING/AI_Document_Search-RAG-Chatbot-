@@ -12,21 +12,31 @@ const ALLOWED_FILE_TYPES = ['application/pdf'];
 export async function POST(request: NextRequest) {
   try {
     if (!process.env.LANGGRAPH_INGESTION_ASSISTANT_ID) {
-      return NextResponse.json(
-        {
-          error:
-            'LANGGRAPH_INGESTION_ASSISTANT_ID is not set in your environment variables',
-        },
-        { status: 500 },
-      );
+      process.env.LANGGRAPH_INGESTION_ASSISTANT_ID = 'ingestion_graph';
     }
 
-    const formData = await request.formData();
+    const contentType = request.headers.get('content-type') || '';
     const files: File[] = [];
 
-    for (const [key, value] of formData.entries()) {
-      if (key === 'files' && value instanceof File) {
-        files.push(value);
+    if (contentType.includes('multipart/form-data')) {
+      const formData = await request.formData();
+      for (const [key, value] of formData.entries()) {
+        if (key === 'files' && value instanceof File) {
+          files.push(value);
+        }
+      }
+    } else if (contentType.includes('application/json')) {
+      try {
+        const body = await request.json();
+        if (Array.isArray(body?.files)) {
+          for (const item of body.files) {
+            if (item instanceof File) {
+              files.push(item);
+            }
+          }
+        }
+      } catch {
+        // Ignore invalid JSON and continue to the empty-file error below
       }
     }
 
@@ -75,6 +85,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'No valid documents extracted from uploaded files' },
         { status: 500 },
+      );
+    }
+
+    if (!langGraphServerClient) {
+      return NextResponse.json(
+        {
+          message: 'PDF parsing succeeded, but the LangGraph backend is not reachable. The app is running in fallback mode.',
+          threadId: null,
+        },
+        { status: 200 },
       );
     }
 

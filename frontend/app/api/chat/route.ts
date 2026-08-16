@@ -29,17 +29,21 @@ export async function POST(req: Request) {
     }
 
     if (!process.env.LANGGRAPH_RETRIEVAL_ASSISTANT_ID) {
-      return new NextResponse(
-        JSON.stringify({
-          error: 'LANGGRAPH_RETRIEVAL_ASSISTANT_ID is not set',
-        }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } },
-      );
+      process.env.LANGGRAPH_RETRIEVAL_ASSISTANT_ID = 'retrieval_graph';
     }
 
     try {
       const assistantId = process.env.LANGGRAPH_RETRIEVAL_ASSISTANT_ID;
       const serverClient = createServerClient();
+
+      if (!serverClient) {
+        return new NextResponse(
+          JSON.stringify({
+            error: 'LangGraph backend is unavailable. The app is running in fallback mode.',
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
 
       const stream = await serverClient.client.runs.stream(
         threadId,

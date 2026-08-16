@@ -152,8 +152,8 @@ startxref
       body: formData,
     });
 
-    expect(langGraphServerClient.createThread).toHaveBeenCalled();
-    expect(langGraphServerClient.client.runs.stream).toHaveBeenCalledWith(
+    expect(langGraphServerClient!.createThread).toHaveBeenCalled();
+    expect(langGraphServerClient!.client.runs.stream).toHaveBeenCalledWith(
       'test-thread-id',
       'ingestion_graph',
       {
